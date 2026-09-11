@@ -1,0 +1,30 @@
+name: StreamCore FFmpeg Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      streamUrl:
+        description: 'YouTube RTMP URL + Stream Key'
+        required: true
+      videoUrl:
+        description: 'Direct Download URL for the Video'
+        required: true
+      durationHours:
+        description: 'Time limit'
+        required: true
+        default: '5.5'
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Download Video
+        run: wget -qO video.mp4 "${{ github.event.inputs.videoUrl }}"
+
+      - name: Start 24/7 Looping Stream
+        run: |
+          DURATION=$(echo "${{ github.event.inputs.durationHours }} * 3600" | bc)
+          ffmpeg -stream_loop -1 -re -i video.mp4 -t $DURATION -c:v copy -c:a aac -f flv "${{ github.event.inputs.streamUrl }}"
