@@ -18,11 +18,16 @@ jobs:
   stream:
     runs-on: ubuntu-latest
     steps:
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg and gdown
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip3 install gdown
 
-      - name: Download Video
-        run: wget -qO video.mp4 "${{ github.event.inputs.videoUrl }}"
+      - name: Download Video from Google Drive
+        run: |
+          echo "Downloading large video using gdown..."
+          gdown "${{ github.event.inputs.videoUrl }}" -O video.mp4
 
       - name: Start 24/7 Looping Stream
         run: |
