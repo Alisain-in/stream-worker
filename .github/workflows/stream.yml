@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Setup FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Setup Environment
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg bc
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -33,7 +33,7 @@ jobs:
       - name: Download Video from Google Drive
         run: |
           echo "Downloading video from Drive..."
-          gdown "${{ github.event.inputs.videoUrl }}" -O video.mp4
+          gdown --fuzzy "${{ github.event.inputs.videoUrl }}" -O video.mp4
 
       - name: Verify Video
         run: |
@@ -50,71 +50,7 @@ jobs:
       - name: Run Stream Engine
         run: |
           echo "Starting Endless Stream Loop..."
-          DURATION_SEC=$(echo "${{ github.event.inputs.durationHours }} * 3600" | bc -l | cut -d '.' -f 1)
-          timeout $DURATION_SEC ffmpeg -re -stream_loop -1 -i video.mp4 -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 60 -c:a aac -b:a 128k -ar 44100 -f flv "${{ github.event.inputs.streamUrl }}" || true
-
-      - name: Trigger Next Account in Chain
-        if: always()
-        run: |
-          echo "5.5 Hours complete. Handing off to the next server..."
-          curl -X POST "https://streamercore.vercel.app/api/streams/rotate" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "streamUrl": "${{ github.event.inputs.streamUrl }}",
-              "videoUrl": "${{ github.event.inputs.videoUrl }}",
-              "secret": "name: Endless Live Stream Worker
-
-on:
-  workflow_dispatch:
-    inputs:
-      streamUrl:
-        description: 'YouTube RTMP Stream URL'
-        required: true
-      videoUrl:
-        description: 'Google Drive Direct Video Link'
-        required: true
-      durationHours:
-        description: 'Max duration in hours (e.g., 5.5)'
-        required: true
-        default: '5.5'
-
-jobs:
-  stream:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Setup FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install gdown
-        run: pip install gdown
-
-      - name: Download Video from Google Drive
-        run: |
-          echo "Downloading video from Drive..."
-          gdown "${{ github.event.inputs.videoUrl }}" -O video.mp4
-
-      - name: Verify Video
-        run: |
-          if [ ! -f "video.mp4" ]; then
-            echo "Failed to download video!"
-            exit 1
-          fi
-          
-          if grep -q "<html" video.mp4; then
-            echo "Google Drive blocked the download (Virus Scan warning)."
-            exit 1
-          fi
-
-      - name: Run Stream Engine
-        run: |
-          echo "Starting Endless Stream Loop..."
-          DURATION_SEC=$(echo "${{ github.event.inputs.durationHours }} * 3600" | bc -l | cut -d '.' -f 1)
+          DURATION_SEC=$(awk "BEGIN {print int(${{ github.event.inputs.durationHours }} * 3600)}")
           timeout $DURATION_SEC ffmpeg -re -stream_loop -1 -i video.mp4 -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 60 -c:a aac -b:a 128k -ar 44100 -f flv "${{ github.event.inputs.streamUrl }}" || true
 
       - name: Trigger Next Account in Chain
@@ -127,5 +63,4 @@ jobs:
               "streamUrl": "${{ github.event.inputs.streamUrl }}",
               "videoUrl": "${{ github.event.inputs.videoUrl }}",
               "secret": "super_secret_streamcore_key_2026"
-            }' || true"
             }' || true
